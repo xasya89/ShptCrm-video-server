@@ -3,11 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShptCrm.Api", "ShptCrm.Api\ShptCrm.Api.csproj", "{392A847E-B3EE-4024-8DE1-83A707EB094C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShptCrm.Api", "ShptCrm.Api\ShptCrm.Api.csproj", "{392A847E-B3EE-4024-8DE1-83A707EB094C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShptCrm.Models", "ShptCrm.Models\ShptCrm.Models.csproj", "{71A63AA5-F639-40C2-AF47-ECA572D94BE3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShptCrm.Models", "ShptCrm.Models\ShptCrm.Models.csproj", "{71A63AA5-F639-40C2-AF47-ECA572D94BE3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShptCrm.Dto", "ShptCrm.Dto\ShptCrm.Dto.csproj", "{B53CDE65-FB27-41D7-A231-1F55B978A03F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShptCrm.Dto", "ShptCrm.Dto\ShptCrm.Dto.csproj", "{B53CDE65-FB27-41D7-A231-1F55B978A03F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShptCrm.VideoDownoloader", "ShptCrm.VideoDownoloader\ShptCrm.VideoDownoloader.csproj", "{95E82AF1-D6BF-40B7-A687-97A920FC5D21}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{B53CDE65-FB27-41D7-A231-1F55B978A03F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B53CDE65-FB27-41D7-A231-1F55B978A03F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B53CDE65-FB27-41D7-A231-1F55B978A03F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95E82AF1-D6BF-40B7-A687-97A920FC5D21}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95E82AF1-D6BF-40B7-A687-97A920FC5D21}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95E82AF1-D6BF-40B7-A687-97A920FC5D21}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95E82AF1-D6BF-40B7-A687-97A920FC5D21}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
