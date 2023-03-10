@@ -63,7 +63,7 @@ namespace ShptCrm.VideoDownoloader
                     {
                         _logger.LogError(ex.Message);
                     };
-                await Task.Delay(60_000);
+                await Task.Delay(300_000);//5 мин
             }
         }
 

@@ -39,7 +39,7 @@ namespace ShptCrm.Api
             builder.Services.AddSingleton<CamStatusService>();
 
             builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
-            builder.Services.AddHostedService<RecordProcessingBackgroundService>();
+            //builder.Services.AddHostedService<RecordProcessingBackgroundService>();
 
             if (isService)
                 builder.Services.AddLogging(builder =>
