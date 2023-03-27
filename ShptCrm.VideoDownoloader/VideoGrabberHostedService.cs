@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MySqlX.XDevAPI;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
+using System.Data;
 
 namespace ShptCrm.VideoDownoloader
 {
@@ -42,7 +43,24 @@ namespace ShptCrm.VideoDownoloader
                 client.BaseAddress = new Uri(videoServerUri);
                 using MySqlConnection con = new MySqlConnection(conStr);
                 con.Open();
-                var actFiles = await con.QueryAsync<ActFile>($"SELECT * FROM actshpt_files WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Retry}");
+                /*
+                var actFiles = await con.QueryAsync<ActFile>($@"SELECT f.* FROM actshpt_video v, actshpt_files f 
+WHERE v.actId=f.actId AND v.stop IS NOT NULL AND (f.Processed={(int)ProcessedStatus.New} OR f.Processed={(int)ProcessedStatus.Retry})");
+                */
+                string dateOrig = "2023-02-19_16-57-26";
+                string[] pair = dateOrig.Split('_');
+                dateOrig = pair[0] + "T" + pair[1].Replace("-", ":");
+                var tt = DateTime.Parse(dateOrig);
+
+                var actFiles = await con.QueryAsync<ActFile>($@"SELECT * FROM actshpt_files 
+WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Retry}");
+                actFiles = actFiles.Where(f =>
+                {
+                    string dateOrig = f.FileName.Substring(f.DevId.ToString().Length + 1).Replace(".mkv", "");
+                    string[] pair = dateOrig.Split('_');
+                    dateOrig = pair[0] + "T" + pair[1].Replace("-", ":");
+                    return DateTime.Parse(dateOrig) < DateTime.Now.AddMinutes(-10);
+                });
                 foreach (var actFile in actFiles)
                     try
                     {
