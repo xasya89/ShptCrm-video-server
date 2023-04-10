@@ -57,7 +57,8 @@ namespace ShptCrm.Api
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
+            var logger = app.Services.GetRequiredService<ILogger<Program>>();
+            app.AddHandlerException(logger);
             app.UseCors(MyAllowSpecificOrigins);
 
             //app.UseHttpsRedirection();
