@@ -95,15 +95,17 @@ WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Re
         {
             using var resp = await httpClient.GetAsync($"streamfile?oid={actFile.DevId}&ot=2&fn={actFile.FileName}");
             resp.EnsureSuccessStatusCode();
-            var stream = resp.Content.ReadAsStreamAsync();
+            var stream = await resp.Content.ReadAsStreamAsync();
             string pathOut = Path.Combine(pathVideo, actFile.ActId.ToString());
             if (!Directory.Exists(pathOut))
                 Directory.CreateDirectory(pathOut);
             string fileName = Path.Combine(pathOut, actFile.FileName);
             if (File.Exists(fileName))
                 File.Delete(fileName);
+            Console.WriteLine("Stream - " + actFile.FileName + " - "+stream.Length.ToString());
             using FileStream fs = new FileStream(fileName, FileMode.CreateNew);
-            await resp.Content.CopyToAsync(fs);
+            await stream.CopyToAsync(fs);
+            //await resp.Content.CopyToAsync(fs);
         }
 
 
