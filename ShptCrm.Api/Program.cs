@@ -37,6 +37,7 @@ namespace ShptCrm.Api
             builder.Services.AddHttpClient();
             builder.Services.AddScoped<MySQLConnectionService>();
             builder.Services.AddSingleton<CamStatusService>();
+            builder.Services.AddScoped<PhotoUploadService>();
 
             builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
             //builder.Services.AddHostedService<RecordProcessingBackgroundService>();
@@ -64,7 +65,7 @@ namespace ShptCrm.Api
             //app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
+            app.UseStaticFiles();
             app.MapControllers();
 
             using (var scope = app.Services.CreateScope())

@@ -30,7 +30,7 @@ namespace ShptCrm.Api.Services
             
             using MySqlConnection con = new MySqlConnection(connectionStr);
             con.Open();
-            var recordDevIdList = await con.QueryAsync<CamStatusModel>("SELECT v.ActId, a.ActNum, a.ActDate, v.DevId FROM actshpt a, actshpt_video v WHERE a.id=v.actId AND v.Stop IS NULL GROUP BY a.id");
+            var recordDevIdList = await con.QueryAsync<CamStatusModel>("SELECT v.ActId, a.ActNum, a.ActDate, a.Fahrer AS ActFahrer, a.CarNum AS ActCar, v.DevId FROM actshpt a, actshpt_video v WHERE a.id=v.actId AND v.Stop IS NULL GROUP BY a.id");
             return from cam in cams
                    join act in recordDevIdList on cam.DevId equals act.DevId into t
                    from sub in t.DefaultIfEmpty()

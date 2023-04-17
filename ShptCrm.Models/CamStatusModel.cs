@@ -14,6 +14,8 @@ namespace ShptCrm.Models
         public int? ActNum { get; set; } = null;
         public DateTime? ActDate { get; set; }
         public string ActDateStr { get => ActDate?.ToString("dd.MM.yy") ?? ""; }
+        public string? ActCar { get; set; }
+        public string? ActFahrer { get; set; }
         public bool IsOnline { get; set; } = false;
         public bool IsRecord { get; set; } = false;
     }
