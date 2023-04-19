@@ -24,6 +24,7 @@ namespace ShptCrm.VideoDownoloader
         private string pathVideo;
         private string conStr;
         private string videoServerUri;
+        private string crmServerUri;
 
         public VideoGrabberHostedService(IConfiguration configuration, ILogger<VideoGrabberHostedService> logger, IHttpClientFactory clientFactory)
         {
@@ -33,6 +34,7 @@ namespace ShptCrm.VideoDownoloader
             pathVideo = configuration.GetSection("PathOut").Value.ToString();
             conStr = configuration.GetConnectionString("MySQL");
             videoServerUri = configuration.GetConnectionString("VideoServer");
+            crmServerUri = configuration.GetConnectionString("ShptCrmServer");
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -40,7 +42,10 @@ namespace ShptCrm.VideoDownoloader
             while (!cancellationToken.IsCancellationRequested)
             {
                 using HttpClient client = _clientFactory.CreateClient();
+                using HttpClient clientCrmServer = _clientFactory.CreateClient();
                 client.BaseAddress = new Uri(videoServerUri);
+                clientCrmServer.BaseAddress = new Uri(crmServerUri);
+
                 using MySqlConnection con = new MySqlConnection(conStr);
                 con.Open();
                 /*
@@ -54,14 +59,26 @@ WHERE v.actId=f.actId AND v.stop IS NOT NULL AND (f.Processed={(int)ProcessedSta
 
                 var actFiles = await con.QueryAsync<ActFile>($@"SELECT * FROM actshpt_files 
 WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Retry}");
-                actFiles = actFiles.Where(f =>
+
+                foreach (var actFile in actFiles.Where(a => a.DevId == null))
+                    try
+                    {
+                        await getPhoto(clientCrmServer, actFile);
+                        await con.ExecuteAsync($"UPDATE actshpt_files SET Processed={(int)ProcessedStatus.Complite} WHERE id=" + actFile.Id);
+                    }
+                    catch (Exception e)
+                    {
+                        await con.ExecuteAsync($"UPDATE actshpt_files SET Processed={(int)ProcessedStatus.Error} WHERE id=" + actFile.Id);
+                    }
+
+                actFiles = actFiles.Where(a=>a.DevId!=null).Where(f =>
                 {
                     string dateOrig = f.FileName.Substring(f.DevId.ToString().Length + 1).Replace(".mkv", "");
                     string[] pair = dateOrig.Split('_');
                     dateOrig = pair[0] + "T" + pair[1].Replace("-", ":");
                     return DateTime.Parse(dateOrig) < DateTime.Now.AddMinutes(-10);
                 });
-                foreach (var actFile in actFiles)
+                foreach (var actFile in actFiles.Where(a=>a.DevId!=null))
                     try
                     {
                         if(await findVideo(client, actFile))
@@ -128,6 +145,17 @@ WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Re
             return eventList.Events.Any(x => x.fn == actFile.FileName);
         }
 
+        private async Task getPhoto(HttpClient client, ActFile actFile)
+        {
+            using var stream = await client.GetStreamAsync("/api/PhotoUpload/" + actFile.FileName);
+            if (!Directory.Exists(Path.Combine(pathVideo, actFile.ActId.ToString())))
+                Directory.CreateDirectory(Path.Combine(pathVideo, actFile.ActId.ToString()));
+            string fileName = Path.Combine(pathVideo, actFile.ActId.ToString(), actFile.FileName);
+            using (var fs = new FileStream(fileName, FileMode.OpenOrCreate))
+                await stream.CopyToAsync(fs);
+
+        }
+
         class EventList
         {
             public IEnumerable<Event> Events { get; set; }
@@ -142,7 +170,7 @@ WHERE Processed={(int)ProcessedStatus.New} OR Processed={(int)ProcessedStatus.Re
             public int Id { get; set; }
             public int ActId { get; set; }
             public string FileName { get; set; }
-            public int DevId { get; set; }
+            public int? DevId { get; set; }
 
         }
 

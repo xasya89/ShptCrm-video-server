@@ -39,7 +39,7 @@ namespace ShptCrm.Api.Services
                         result.Add(f.FileName);
                         await f.CopyToAsync(fs);
                         await con.ExecuteAsync("INSERT INTO actshpt_files (ActId, FileName, Processed, DevId) VALUES (@ActId, @FileName, @Processed, @DevId)",
-                            new { ActId = actId, FileName = f.FileName, Processed = 1, DevId = (int?)null });
+                            new { ActId = actId, FileName = f.FileName, Processed = 0, DevId = (int?)null });
                     }
                 transaction.Commit();
             }
