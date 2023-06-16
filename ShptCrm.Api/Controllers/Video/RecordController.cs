@@ -11,41 +11,24 @@ namespace ShptCrm.Api.Controllers.Video
     [ApiController]
     public class RecordController : ControllerBase
     {
-        private readonly CamStatusService _camStatus;
-        private readonly MySqlConnection _conn;
-        private readonly IHttpClientFactory _clientFactory;
-        private string dvrServer;
-        public RecordController(IConfiguration configuration, CamStatusService camStatus, MySQLConnectionService connService, IHttpClientFactory clientFactory)
+        private readonly ICamActionsService _actionsService;
+        public RecordController(ICamActionsService actionsService)
         {
-            _camStatus= camStatus;
-            _conn = connService.GetConnection();
-            _clientFactory = clientFactory;
-            dvrServer = configuration.GetConnectionString("DvrServer");
+            _actionsService = actionsService;
         }
 
         [HttpPost]
         public async Task<IActionResult> Post( [FromBody] RecordPostModel model)
         {
-            using var client = _clientFactory.CreateClient();
-            foreach (var cam in model.Cams)
-            {
-                await _conn.ExecuteAsync($"INSERT INTO actshpt_video (ActId, DevId, Start) VALUES ({model.ActId}, {cam}, NOW())");
-                await client.GetAsync($"{dvrServer}/command.cgi?cmd=record&ot=2&oid={cam}");
-                MonitorNewRecordsBackgroundService.StartRecord(cam);
-            }
+            await _actionsService.StartRecord(model);
                 
             return Ok();
         }
 
         [HttpPut]
-        public async Task<IActionResult> Put([FromBody] IEnumerable<int> cams)
+        public async Task<IActionResult> Put([FromBody] IEnumerable<int> devsId)
         {
-            using var client = _clientFactory.CreateClient();
-            foreach (var cam in cams)
-            {
-                await client.GetAsync($"{dvrServer}/command.cgi?cmd=recordStop&ot=2&oid={cam}");
-                MonitorNewRecordsBackgroundService.StopRecord(cam);
-            }
+            _actionsService.StopRecord(devsId);
 
             return Ok();
         }

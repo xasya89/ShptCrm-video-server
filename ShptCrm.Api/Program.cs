@@ -1,4 +1,5 @@
 using ShptCrm.Api.Services;
+using ShptCrm.Api.Services.BackgroundServicies;
 using System.Diagnostics;
 
 namespace ShptCrm.Api
@@ -10,6 +11,7 @@ namespace ShptCrm.Api
             bool isService = !(Debugger.IsAttached || args.Contains("--console"));
 
             var builder = WebApplication.CreateBuilder(args);
+            var configuration = builder.Configuration;
             string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
             if (isService && OperatingSystem.IsWindows())
@@ -38,8 +40,11 @@ namespace ShptCrm.Api
             builder.Services.AddScoped<MySQLConnectionService>();
             builder.Services.AddSingleton<CamStatusService>();
             builder.Services.AddScoped<PhotoUploadService>();
+            builder.Services.AddTransient<ICamActionsService, CamActionsService>();
 
-            builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
+            //builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
+            builder.Services.AddHostedService<NewMonitoringRecords>();
+            builder.Services.AddHostedService<PingBackgroundService>();
             //builder.Services.AddHostedService<RecordProcessingBackgroundService>();
 
             if (isService)
