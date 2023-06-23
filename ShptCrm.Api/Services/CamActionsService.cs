@@ -1,19 +1,20 @@
 ﻿using Dapper;
 using MySql.Data.MySqlClient;
+using ShptCrm.Models.RecordModel;
 using System.Security.Policy;
+using System.Text.Json;
 using static ShptCrm.Api.Controllers.Video.RecordController;
 
 namespace ShptCrm.Api.Services
 {
     public interface ICamActionsService
     {
-        public Task StartRecord(RecordPostModel model);
+        public Task StartRecord(RecordStartModel model);
         public Task StopRecord(IEnumerable<int> devsId);
     }
     public class CamActionsService : ICamActionsService
     {
         private readonly ILogger<CamActionsService> _logger;
-        private readonly MySqlConnection _conn;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _clientFactory;
         private string _dvrServer;
@@ -27,7 +28,7 @@ namespace ShptCrm.Api.Services
             _dvrServer = configuration.GetConnectionString("DvrServer");
             _connectionString = configuration.GetConnectionString("MySQL");
         }
-        public async Task StartRecord(RecordPostModel model)
+        public async Task StartRecord(RecordStartModel model)
         {
             using(MySqlConnection con = new MySqlConnection(_connectionString))
             {
@@ -35,24 +36,28 @@ namespace ShptCrm.Api.Services
                 var transaction = con.BeginTransaction();
                 try
                 {
-                    foreach (var cam in model.Cams)
+                    var camInRecrod = await con.QueryAsync<int>("SELECT DevId FROM actshpt_video WHERE Stop IS NULL AND DevId IN @Cmas",
+                        new { Cams = model.cams });
+                    if (camInRecrod.Count() > 0)
+                        throw new Exception($"Камеры {string.Join(',', model.cams)} уже записывают акт");
+                    foreach (var cam in model.cams)
                     {
-                        await _conn.ExecuteAsync($"INSERT INTO actshpt_video (ActId, DevId, Start, Status) VALUES ({model.ActId}, {cam}, NOW(), 0)");
+                        await con.ExecuteAsync($"INSERT INTO actshpt_video (ActId, DevId, Start, Status) VALUES ({model.actId}, {cam}, NOW(), 0)");
                         await sendStartRecord(cam);
                     }
                     transaction.Commit();
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError("Error CamActionsService " + ex.Message);
+                    //_logger.LogError("Error CamActionsService " + ex.Message + "\n" + JsonSerializer.Serialize(model) + "\n" + _dvrServer);
                     transaction.Rollback();
                     try
                     {
-                        foreach (var cam in model.Cams)
+                        foreach (var cam in model.cams)
                             await sendStopRecord(cam);
                     }
                     catch (Exception ) { }
-                    throw ex;
+                    throw new Exception( JsonSerializer.Serialize(model) + "\n" + _dvrServer);
                 }
             }
         }
@@ -88,16 +93,16 @@ namespace ShptCrm.Api.Services
             }
         }
 
-        private Task sendStartRecord(int devId)
+        private async Task sendStartRecord(int devId)
         {
             using var client = _clientFactory.CreateClient();
-            return client.GetAsync($"{_dvrServer}/command.cgi?cmd=record&ot=2&oid={devId}");
+            await client.GetAsync($"{_dvrServer}/command.cgi?cmd=record&ot=2&oid={devId}");
         }
 
-        private Task sendStopRecord(int devId)
+        private async Task sendStopRecord(int devId)
         {
             using var client = _clientFactory.CreateClient();
-            return client.GetAsync($"{_dvrServer}/command.cgi?cmd=recordStop&ot=2&oid={devId}");
+            await client.GetAsync($"{_dvrServer}/command.cgi?cmd=recordStop&ot=2&oid={devId}");
         }
             
     }
