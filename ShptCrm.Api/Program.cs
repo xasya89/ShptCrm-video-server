@@ -37,10 +37,12 @@ namespace ShptCrm.Api
                                   });
             });
             builder.Services.AddHttpClient();
+            builder.Services.AddMemoryCache();
             builder.Services.AddScoped<MySQLConnectionService>();
             builder.Services.AddSingleton<CamStatusService>();
             builder.Services.AddScoped<PhotoUploadService>();
             builder.Services.AddTransient<ICamActionsService, CamActionsService>();
+            builder.Services.AddTransient<ICameraRecordControl, CameraRecordControl>();
 
             //builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
             builder.Services.AddHostedService<NewMonitoringRecords>();

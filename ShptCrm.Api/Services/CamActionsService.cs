@@ -17,16 +17,19 @@ namespace ShptCrm.Api.Services
         private readonly ILogger<CamActionsService> _logger;
         private readonly IConfiguration _configuration;
         private readonly IHttpClientFactory _clientFactory;
+        private readonly ICameraRecordControl _recordControl;
         private string _dvrServer;
         private string _connectionString;
         public CamActionsService(IConfiguration configuration, 
             IHttpClientFactory clientFactory,
-            ILogger<CamActionsService> logger)
+            ILogger<CamActionsService> logger,
+            ICameraRecordControl recordControl)
         {
             _configuration = configuration;
             _clientFactory = clientFactory;
             _dvrServer = configuration.GetConnectionString("DvrServer");
             _connectionString = configuration.GetConnectionString("MySQL");
+            _recordControl = recordControl;
         }
         public async Task StartRecord(RecordStartModel model)
         {
@@ -36,28 +39,26 @@ namespace ShptCrm.Api.Services
                 var transaction = con.BeginTransaction();
                 try
                 {
-                    var camInRecrod = await con.QueryAsync<int>("SELECT DevId FROM actshpt_video WHERE Stop IS NULL AND DevId IN @Cmas",
+                    var camInRecrod = await con.QueryAsync<int>("SELECT DevId FROM actshpt_video WHERE Stop IS NULL AND DevId IN @Cams",
                         new { Cams = model.cams });
                     if (camInRecrod.Count() > 0)
                         throw new Exception($"Камеры {string.Join(',', model.cams)} уже записывают акт");
                     foreach (var cam in model.cams)
                     {
                         await con.ExecuteAsync($"INSERT INTO actshpt_video (ActId, DevId, Start, Status) VALUES ({model.actId}, {cam}, NOW(), 0)");
-                        await sendStartRecord(cam);
+                        await _recordControl.StartRecord(cam);
                     }
                     transaction.Commit();
                 }
                 catch (Exception ex)
                 {
-                    //_logger.LogError("Error CamActionsService " + ex.Message + "\n" + JsonSerializer.Serialize(model) + "\n" + _dvrServer);
                     transaction.Rollback();
                     try
                     {
-                        foreach (var cam in model.cams)
-                            await sendStopRecord(cam);
+                        await _recordControl.StopRecord(model.cams.ToArray());
                     }
                     catch (Exception ) { }
-                    throw new Exception( JsonSerializer.Serialize(model) + "\n" + _dvrServer);
+                    throw ex;
                 }
             }
         }
@@ -74,7 +75,7 @@ namespace ShptCrm.Api.Services
                     foreach (var devId in devsId)
                     {
                         await con.ExecuteAsync($"UPDATE actshpt_video SET Stop=NOW() WHERE devId=" + devId);
-                        await sendStopRecord(devId);
+                        await _recordControl.StopRecord(devId);
                     }
                     transaction.Commit();
                 }
@@ -84,8 +85,7 @@ namespace ShptCrm.Api.Services
                     transaction.Rollback();
                     try
                     {
-                        foreach (var devId in devsId)
-                            await sendStartRecord(devId);
+                        await _recordControl.StartRecord(devsId.ToArray());
                     }
                     catch (Exception ) { };
                     throw ex;
@@ -93,17 +93,6 @@ namespace ShptCrm.Api.Services
             }
         }
 
-        private async Task sendStartRecord(int devId)
-        {
-            using var client = _clientFactory.CreateClient();
-            await client.GetAsync($"{_dvrServer}/command.cgi?cmd=record&ot=2&oid={devId}");
-        }
-
-        private async Task sendStopRecord(int devId)
-        {
-            using var client = _clientFactory.CreateClient();
-            await client.GetAsync($"{_dvrServer}/command.cgi?cmd=recordStop&ot=2&oid={devId}");
-        }
             
     }
 }

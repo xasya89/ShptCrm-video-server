@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace ShptCrm.Api.Services
 {
+
     public class NewMonitoringRecords : IHostedService, IDisposable
     {
         private readonly IHttpClientFactory _httpClientFactory;
