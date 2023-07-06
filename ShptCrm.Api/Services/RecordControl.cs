@@ -1,4 +1,5 @@
-﻿using System.Configuration;
+﻿using ShptCrm.Models.ConfigurationModels;
+using System.Configuration;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 
@@ -16,15 +17,13 @@ namespace ShptCrm.Api.Services
     {
         private string _dvrServer;
         private readonly IHttpClientFactory _clientFactory;
-        private readonly IConfiguration _configuration;
-        private List<CamConfiguration> _camConfigurations = new();
+        private readonly CamsSettings _camsSettings;
 
-        public CameraRecordControl(IConfiguration configuration, IHttpClientFactory clientFactory)
+        public CameraRecordControl(IConfiguration configuration, IHttpClientFactory clientFactory, CamsSettings camsSettings)
         {
             _dvrServer = configuration.GetConnectionString("DvrServer");
-            configuration.GetSection("Cams").Bind(_camConfigurations);
             _clientFactory = clientFactory;
-            _configuration = configuration;
+            _camsSettings = camsSettings;
         }
 
         public async Task StartRecord(int devId)
@@ -56,12 +55,12 @@ namespace ShptCrm.Api.Services
         {
             using var client = _clientFactory.CreateClient();
             using var ping = new Ping();
-            var cams = _configuration.GetSection("Cams").Get(typeof(List<CamStatusModel>)) as List<CamStatusModel>;
+            var cams = _camsSettings.Settings.Select(x => new CamStatusModel { DevId = x.DevId, PathName = x.PathName });
             foreach(var cam in cams)
             {
                 var status = await client.GetFromJsonAsync<CameraStatusModel>($"{_dvrServer}/command.cgi?cmd=getObject&ot=2&oid={cam.DevId}");
                 cam.IsRecord = status.Data.Recording;
-                var pingResult = await ping.SendPingAsync(_camConfigurations.Where(x => x.DevId == cam.DevId).First().IpAdress);
+                var pingResult = await ping.SendPingAsync(_camsSettings.Settings.Where(x => x.DevId == cam.DevId).First().IpAdress);
 
                 cam.IsOnline = pingResult.Status== IPStatus.Success;
             }

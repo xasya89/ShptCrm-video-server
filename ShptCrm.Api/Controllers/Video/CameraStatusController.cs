@@ -14,6 +14,6 @@ namespace ShptCrm.Api.Controllers.Video
             _camService = camService;
         }
         [HttpGet]
-        public async Task<IEnumerable<CamStatusModel>> GetStatus() => await _camService.GetStatus();
+        public IEnumerable<CamStatusModel> GetStatus() =>  _camService.GetStatus();
     }
 }

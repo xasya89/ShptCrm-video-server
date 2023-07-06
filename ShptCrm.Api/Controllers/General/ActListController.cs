@@ -9,21 +9,32 @@ using Dapper;
 
 namespace ShptCrm.Api.Controllers.General
 {
+    //TODO: Создать UnitOfWOrk для репозиторий
     [Route("api/general/[controller]")]
     [ApiController]
     public class ActListController : ControllerBase
     {
-        private readonly MySQLConnectionService _conn;
-        public ActListController(MySQLConnectionService conn)
+        private string _connectionString;
+        public ActListController(IConfiguration configuration)
         {
-            _conn = conn;
+            _connectionString = configuration.GetConnectionString("MySQL");
         }
 
         [HttpGet]
-        public async Task<IEnumerable<ActShpt>> Get() => await ActShpRepository.GetList(_conn.GetConnection());
+        public async Task<IEnumerable<ActShpt>> Get()
+        {
+            using MySqlConnection con = new MySqlConnection(_connectionString);
+            con.Open();
+            return await ActShpRepository.GetList(con);
+        }
 
         [HttpGet("{actId}")]
-        public async Task<ActShpt> Get(int actId) => await ActShpRepository.Get(_conn.GetConnection(), actId);
+        public async Task<ActShpt> Get(int actId)
+        {
+            using MySqlConnection con = new MySqlConnection(_connectionString);
+            con.Open();
+            return await ActShpRepository.Get(con, actId);
+        }
 
     }
 }

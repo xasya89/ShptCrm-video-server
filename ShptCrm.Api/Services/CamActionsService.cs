@@ -15,19 +15,13 @@ namespace ShptCrm.Api.Services
     public class CamActionsService : ICamActionsService
     {
         private readonly ILogger<CamActionsService> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly IHttpClientFactory _clientFactory;
         private readonly ICameraRecordControl _recordControl;
-        private string _dvrServer;
         private string _connectionString;
         public CamActionsService(IConfiguration configuration, 
             IHttpClientFactory clientFactory,
             ILogger<CamActionsService> logger,
             ICameraRecordControl recordControl)
         {
-            _configuration = configuration;
-            _clientFactory = clientFactory;
-            _dvrServer = configuration.GetConnectionString("DvrServer");
             _connectionString = configuration.GetConnectionString("MySQL");
             _recordControl = recordControl;
         }

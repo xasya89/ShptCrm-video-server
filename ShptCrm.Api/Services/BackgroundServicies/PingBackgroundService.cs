@@ -1,60 +1,50 @@
 ﻿using System.Net.NetworkInformation;
 using MySql.Data.MySqlClient;
 using Dapper;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ShptCrm.Api.Services.BackgroundServicies
 {
     public class PingBackgroundService : BackgroundService
     {
         private readonly ILogger<PingBackgroundService> _logger;
+        private readonly CamStatusService _statusService;
         private readonly ICamActionsService _actionsService;
         private string _connectionString;
-        private List<CamConfiguration> _camConfigurations = new();
-        public PingBackgroundService(IConfiguration configuration, ILogger<PingBackgroundService> logger, ICamActionsService actionsService)
+        public PingBackgroundService(ILogger<PingBackgroundService> logger, 
+            CamStatusService statusService,
+            ICamActionsService actionsService)
         {
             _logger = logger;
-            configuration.GetSection("Cams").Bind(_camConfigurations);
-            _connectionString = configuration.GetConnectionString("MySQL");
+            _statusService = statusService;
             _actionsService = actionsService;
         }
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            List<int> disconnectedCams = new();
+            List<int> disconnectedDevIds = new();
             var ping = new Ping();
-            while(!stoppingToken.IsCancellationRequested)
+            while (!stoppingToken.IsCancellationRequested)
             {
-                if (_camConfigurations == null)
-                    break;
-                using (MySqlConnection con = new MySqlConnection(_connectionString))
-                    try
-                    {
-                        IEnumerable<int> devIdWrite = await con.QueryAsync<int>("SELECT DevId FROM actshpt_video WHERE Stop IS NULL");
-                        List<int> stopedRecoredOnDevices = new List<int>();
-                        foreach(int devId in devIdWrite)
-                        {
-                            string camIpAdress = _camConfigurations.Where(x => x.DevId == devId).First().IpAdress;
-                            var resultPing = await ping.SendPingAsync(camIpAdress);
+                try
+                {
+                    var offlineCams = _statusService.GetStatus().Where(x => !x.IsOnline & x.ActId != null).ToList();
 
-                            if (resultPing.Status != IPStatus.Success & disconnectedCams.Where(x => x == devId).Any())
-                                stopedRecoredOnDevices.Add(devId);
-                            if (resultPing.Status != IPStatus.Success & !disconnectedCams.Where(x => x == devId).Any())
-                                disconnectedCams.Add(devId);
-                            if(resultPing.Status == IPStatus.Success)
-                                disconnectedCams.Remove(devId);
-                        }
-                        
-                        if (stopedRecoredOnDevices.Count > 0)
+                    foreach (var cam in offlineCams)
+                        if (disconnectedDevIds.Contains(cam.DevId))
                         {
-                            await _actionsService.StopRecord(stopedRecoredOnDevices);
-                            foreach (var devId in stopedRecoredOnDevices)
-                                disconnectedCams.Remove(devId);
+                            await _actionsService.StopRecord(new List<int>() { cam.DevId });
+                            disconnectedDevIds.Remove(cam.DevId);
                         }
-                    }
-                    catch(Exception ex)
-                    {
-                        _logger.LogError("Error PingBackgroundService: " + ex.Message);
-                    }
-                    await Task.Delay(1 * 60 * 1_000);
+                        else
+                            disconnectedDevIds.Add(cam.DevId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(nameof(PingBackgroundService), ex);
+                }
+
+
+                await Task.Delay(15 * 60 * 1_000);
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using MySql.Data.MySqlClient;
 using MySqlX.XDevAPI.Common;
+using ShptCrm.Models.ConfigurationModels;
 using System.Text.Json.Serialization;
 
 namespace ShptCrm.Api.Services
@@ -9,17 +10,15 @@ namespace ShptCrm.Api.Services
     public class NewMonitoringRecords : IHostedService, IDisposable
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly IConfiguration _configuration;
         private readonly ILogger<NewMonitoringRecords> _logger;
         private System.Threading.Timer? _timer = null;
         private string dbConnectioName;
-        private string dvrServer;
-        public NewMonitoringRecords(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<NewMonitoringRecords> logger)
+        private readonly CamsSettings _camsSettings;
+        public NewMonitoringRecords(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<NewMonitoringRecords> logger, CamsSettings camsSettings)
         {
             _httpClientFactory = httpClientFactory;
-            _configuration = configuration;
             dbConnectioName = configuration.GetConnectionString("MySQL");
-            dvrServer = configuration.GetConnectionString("DvrServer");
+            _camsSettings = camsSettings;
             _logger = logger;
         }
         public Task StartAsync(CancellationToken cancellationToken)
@@ -38,11 +37,11 @@ namespace ShptCrm.Api.Services
                 {
                     con.Open();
                     var devRecording = await con.QueryAsync<ActVideo>("SELECT * FROM actshpt_video WHERE Status=0");
-                    client.BaseAddress = new Uri(dvrServer);
+                    client.BaseAddress = new Uri(_camsSettings.DvrServer);
                     foreach (ActVideo actVideo in devRecording)
                     {
                         var records = await client.GetFromJsonAsync<Record>($"/q.json?cmd=getevents&oid={actVideo.DevId}&ot=2");
-                        var events = records?.events?.Where(r => r.sb > 0 & new DateTime(long.Parse( r.c)) >= DateTime.Now.AddDays(-1));
+                        var events = records?.events?.Where(r => r.sb > 0 & new DateTime(long.Parse(r.c)) >= DateTime.Now.AddDays(-1));
                         if (events == null || !events.Any())
                             continue;
                         var recordsInDb = await con.QueryAsync<string>($@"SELECT FileName FROM actshpt_files 
@@ -62,7 +61,7 @@ WHERE FileName IN ( {string.Join(",", events.Select(r => $"'{r.fn}'"))} )");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Ошибка мониторинга записей\n" + ex.Message);
+                _logger.LogError($"Ошибка мониторинга записей\n" + ex.Message + "\n" + ex.StackTrace);
             }
         }
 

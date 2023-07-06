@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Options;
 using ShptCrm.Api.Services;
 using ShptCrm.Api.Services.BackgroundServicies;
+using ShptCrm.Models.ConfigurationModels;
 using System.Diagnostics;
 
 namespace ShptCrm.Api
@@ -38,7 +40,13 @@ namespace ShptCrm.Api
             });
             builder.Services.AddHttpClient();
             builder.Services.AddMemoryCache();
-            builder.Services.AddScoped<MySQLConnectionService>();
+
+            builder.Services.AddOptions<CamsSettings>()
+                .BindConfiguration("CamsSettings")
+                .ValidateMiniValidation()
+                .ValidateOnStart();
+            builder.Services.AddSingleton(x=>x.GetRequiredService<IOptions<CamsSettings>>().Value);
+
             builder.Services.AddSingleton<CamStatusService>();
             builder.Services.AddScoped<PhotoUploadService>();
             builder.Services.AddTransient<ICamActionsService, CamActionsService>();
@@ -47,6 +55,7 @@ namespace ShptCrm.Api
             //builder.Services.AddHostedService<MonitorNewRecordsBackgroundService>();
             builder.Services.AddHostedService<NewMonitoringRecords>();
             builder.Services.AddHostedService<PingBackgroundService>();
+            builder.Services.AddHostedService<CheckingCamsStatusBackgroundService>();
             //builder.Services.AddHostedService<RecordProcessingBackgroundService>();
 
             if (isService)

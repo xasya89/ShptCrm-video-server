@@ -11,12 +11,10 @@ namespace ShptCrm.Api.Services
     public class PhotoUploadService
     {
         private string connectionStr;
-        private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
 
         public PhotoUploadService(IConfiguration configuration, IWebHostEnvironment env)
         {
-            _configuration = configuration;
             _env = env;
             connectionStr = configuration.GetConnectionString("MySQL");
         }
